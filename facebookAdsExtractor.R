@@ -24,8 +24,8 @@ library(keboola.sapi.r.client)
 ############################################################
 
 ##USER VARIABLES
-apikey <- "2089-66258-314da17d9f835a670ade002880c1c5c6a1455c35"
-configName <- "Slevoteka"
+apikey <- "YOUR-API-KEY-HERE"
+configName <- "PROJECT-NAME"
 
 ##SAMPLE FB EXTRACTOR CONFIG
 
@@ -66,7 +66,7 @@ fbConfig<-
 
 ## GLOBAL VARIABLES - DO NOT TOUCH
 
-
+fbConfig<-read.csv(textConnection(fbConfig))
 
 # create client
 client <- SapiClient$new(token = apikey)
@@ -74,29 +74,16 @@ client <- SapiClient$new(token = apikey)
 # verify the token
 tokenDetails <- client$verifyToken()
 
-# create a bucket
-bucket <- client$createBucket("new_bucket","in","A brand new Bucket!")
+# create the sys bucket for the extractor
+bucket <- client$createBucket("ex-fb-ads","sys","Facebook Ads Extractor",backend='snowflake')
 
-# create a table
-table <- client$saveTable(myDataFrame, bucket$id, "new_table")
+# create the config table in the fb ads bucket
+table <- client$saveTable(fbConfig, bucket$id, configName,options=list(primaryKey = "rowId"))
 
-# import a table
-mydata <- client$importTable('in.c-my_bucket.my_table')
+# now we need to register the extractor
 
-# list buckets
-buckets <- client$listBuckets()
+## A Tady jsem v prdeli protože to nejde.
 
-# list all tables in a bucket
-tables <- client$listTables(bucket = bucket$id)
-
-# list all tables
-tables <- client$listTables()
-
-# delete table
-client$deleteTable(table$id)
-
-# delete bucket
-client$deleteBucket(bucket$id)
 
 #send this link to a client to authorize:
 clientLink <-
