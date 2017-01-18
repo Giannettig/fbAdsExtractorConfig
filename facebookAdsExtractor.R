@@ -1,23 +1,3 @@
-############################################################
-#                       INSTALLATION                       #
-############################################################
-
-# first need to install the devtools package if it isn't already installed
-install.packages("devtools")
-# load the library
-library(devtools)
-
-# this package relies on another github package 
-# for aws request signature generation
-devtools::install_github("cloudyr/aws.signature")
-
-# install the sapi client package
-devtools::install_github("keboola/sapi-r-client")
-library('keboola.sapi.r.client')
-
-# load the library (dependencies will be loaded automatically)
-library(keboola.sapi.r.client)
-
 
 ############################################################
 # PUT HERE NECESSARY INFORMATION FOR SETTING THE EXTRACTOR #
@@ -27,16 +7,21 @@ library(keboola.sapi.r.client)
 apikey <- "YOUR-API-KEY-HERE"
 configName <- "PROJECT-NAME"
 
+#to make the config work you will also need the “Ad Account Number” 
+#(NOT the business manager id)  which your client should be able to provide from https://business.facebook.com 
+
+adAccountNumber<-"the_account number given by the client"
+
 ##SAMPLE FB EXTRACTOR CONFIG
 
 #For API v2.6
 
 fbConfig<-
-'"endpoint","params","dataType","dataField","recursionParams","rowId"
-"act_<ad_account_number>/campaigns","{""fields"":""id,name,account_id""}","campaigns","data","","1"
-"act_<ad_account_number>/adsets","{""fields"":""id,name""}","adsets","data","","2"
-"act_<ad_account_number>/ads","{""fields"":""id,name""}","ads","data","","3"
-"{3:id}/insights","{""fields"":""ad_id,impressions,actions,clicks,spend"",""date_preset"": ""last_7_days"",""time_increment"":""1""}","ads_insights","data","","4"'
+paste('"endpoint","params","dataType","dataField","recursionParams","rowId"
+"act_',adAccountNumber,'/campaigns","{""fields"":""id,name,account_id""}","campaigns","data","","1"
+"act_',adAccountNumber,'/adsets","{""fields"":""id,name""}","adsets","data","","2"
+"act_',adAccountNumber,'/ads","{""fields"":""id,name""}","ads","data","","3"
+"{3:id}/insights","{""fields"":""ad_id,impressions,actions,clicks,spend"",""date_preset"": ""last_7_days"",""time_increment"":""1""}","ads_insights","data","","4"', sep='')
 
 ##CONFIG DOCUMENTATION - CREDIT Marcus Wong, Keboola
 
@@ -61,6 +46,27 @@ fbConfig<-
 # 
 
 ############################################################
+#                       INSTALLATION                       #
+############################################################
+
+# first need to install the devtools package if it isn't already installed
+install.packages("devtools")
+# load the library
+library(devtools)
+
+# this package relies on another github package 
+# for aws request signature generation
+devtools::install_github("cloudyr/aws.signature")
+
+# install the sapi client package
+devtools::install_github("keboola/sapi-r-client")
+library('keboola.sapi.r.client')
+
+# load the library (dependencies will be loaded automatically)
+library(keboola.sapi.r.client)
+
+
+############################################################
 #                      RUN THE SCRIPT                      #
 ############################################################
 
@@ -82,16 +88,36 @@ table <- client$saveTable(fbConfig, bucket$id, configName,options=list(primaryKe
 
 # now we need to register the extractor
 
-## A Tady jsem v prdeli protože to nejde.
+#' registerComponent
+#' Registers a custom component in keboola without UI
+#' @param apikey X-StorageApi-Token
+#' @param bucket The bucket where the configuration table is located
+#' @param configName The name of the configuration table
+#' @param kbcConfigId The id of the registered component. 
+#' A list of all components in KBC is here: https://connection.keboola.com/v2/storage/
+#' @example registerComponent(apikey,configName,'keboola.ex-facebook-ads')
 
+registerComponent<-function(apikey,configName,kbcConfigId){
 
+  endpoint<-paste("https://connection.keboola.com/v2/storage/components/",kbcConfigId,"/configs",sep="")
+  
+  call <- POST(endpoint,body=list(configurationId=configName,name=paste("Facebook Ads Extractor",configName)),add_headers('X-StorageApi-Token'=apikey))
+  
+  results<-if(!call$status_code==201) {
+    stop(paste("API Call failed. status:",content(call)$error, sep=" "),call.=TRUE)
+  }
+
+  }
+
+registerComponent(apikey,configName,'keboola.ex-facebook-ads')
+                              
 #send this link to a client to authorize:
 clientLink <-
   paste(
     "https://syrup.keboola.com/ex-fb-ads/oauth?token=",
     apikey,
     "&config=",
-    tableName,
+    configName,
     sep = ""
   )
 
